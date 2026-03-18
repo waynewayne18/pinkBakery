@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import os
 from functools import reduce
-
+import algo
 st.set_page_config(page_title="Bristol-Pink Dashboard", layout="wide")
 
 # product colours
@@ -98,6 +98,13 @@ else:
         df.columns = ["Date", "Croissant"]
         df["Date"] = pd.to_datetime(df["Date"], dayfirst=True)
         return df
+    
+    @st.cache_resource
+    def load_forecast(algo=algo.Algo()):
+        maes = algo.Predictor()
+        forecast_df = algo.forecast(days=forecast_days)
+        return forecast_df, maes
+
 
     frames = []
     for name, filename in file_dict.items():
@@ -150,37 +157,38 @@ else:
         pred_dates = pd.date_range(
             start=df["Date"].max() + pd.Timedelta(days=1), periods=forecast_days
         )
-
-        # XGBoost predictions will go here once the model is connected
-        pred_df = pd.DataFrame({
-            "Date": pred_dates,
-            "Predicted_Sales": [None] * forecast_days
-        })
-
+        
+        forecast_df, maes = load_forecast()
+        targetcast_df = forecast_df[forecast_df['product'] == target]
         v_graph, v_table = st.tabs(["Forecast", "Data Table"])
 
         with v_graph:
             st.subheader(f"{forecast_days}-Day Forecast — {target}")
-            fig_pred = px.line(pred_df, x="Date", y="Predicted_Sales")
+            fig_pred = px.line(targetcast_df, x="date", y="forecast")
             fig_pred.update_traces(line_color=COLOR_MAP.get(target), line_width=4)
             fig_pred.update_layout(template="plotly_dark", dragmode="zoom")
-            st.plotly_chart(fig_pred, use_container_width=True)
+            st.plotly_chart(fig_pred, use_container_width=True, hide_index = True)
 
         with v_table:
             st.subheader(f"{target} — Sales Data")
             st.write("Recent Sales")
-            st.dataframe(df[["Date", target]].tail(10), use_container_width=True)
-            st.write("Forecast")
-            st.dataframe(pred_df, use_container_width=True)
+            st.dataframe(df[["Date", target]].tail(10), use_container_width=True, hide_index = True)
+            st.write("Data Graph")
+            st.dataframe(targetcast_df, use_container_width=True, hide_index = True)
 
     with tab_model:
         st.header("Model Performance")
         st.caption("Metrics will be populated once the XGBoost model is connected.")
 
         # MAE = Mean Absolute Error, lower is better
+        mae_avg = 0
+        for mae in maes:
+            mae_avg += mae
+        mae_avg = mae_avg/len(maes)
+
         metrics = pd.DataFrame({
             "Algorithm":    ["XGBoost"],
-            "MAE":          ["—"],
+            "MAE":          [mae_avg],
             "Accuracy (%)": ["—"],
         })
         st.table(metrics)
