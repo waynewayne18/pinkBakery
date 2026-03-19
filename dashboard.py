@@ -100,7 +100,7 @@ else:
         return df
     
     @st.cache_resource
-    def load_forecast(algo=algo.Algo()):
+    def load_forecast(forecast_days, algo=algo.Algo()):
         maes = algo.Predictor()
         forecast_df = algo.forecast(days=forecast_days)
         return forecast_df, maes
@@ -158,7 +158,7 @@ else:
             start=df["Date"].max() + pd.Timedelta(days=1), periods=forecast_days
         )
         
-        forecast_df, maes = load_forecast()
+        forecast_df, maes = load_forecast(forecast_days)
         translator = {'Croissant' : 0, 'Cappuccino' : 1, 'Americano' : 2}
         targetcast_df = forecast_df[forecast_df['product'] == target]
         v_graph, v_table = st.tabs(["Forecast", "Data Table"])

@@ -68,6 +68,7 @@ class Algo:
             
             for day in range(1, days + 1):
                 future_date = product_history['date'].max() + pd.Timedelta(days = 1)
+                future_date = future_date
                 recent_values = product_history['value'].values
                 row = {
                     'day_of_week':  future_date.dayofweek,
